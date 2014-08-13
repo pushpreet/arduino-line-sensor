@@ -1,9 +1,5 @@
 #include <Arduino.h>
 
-#ifdef _MOTOR_H_
-#include <Motor.h>
-#endif
-
 #ifndef _LINE_SENSOR_H_
 #define _LINE_SENSOR_H_
 
@@ -22,7 +18,6 @@ class lineSensor
 		void readRawSensors( );
 		void calibrate( unsigned int _motorLeftA, unsigned int _motorLeftB,
 						unsigned int _motorRightA, unsigned int _motorRightB );
-		void calibrate(motor _motorLeft, motor _motorRight);
 		void calibrate();
 
 	public:
@@ -91,17 +86,24 @@ void lineSensor::readRawSensors()
 	}
 }
 
-void lineSensor::calibrate( motor _motorLeft, motor _motorRight )
+void lineSensor::calibrate(unsigned int _motorLeftA, unsigned int _motorLeftB,
+	unsigned int _motorRightA, unsigned int _motorRightB)
 {
 	calibrated = 1;
-	
-	_motorLeft.setSpeed(-64);
-	_motorRight.setSpeed(64);
+
+	// turn left motor backward
+	digitalWrite(_motorLeftA, LOW);
+	analogWrite(_motorLeftB, 64);
+
+	// turn right motor forward
+	analogWrite(_motorRightA, 64);
+	digitalWrite(_motorRightB, LOW);
 
 	for (unsigned int samples = 0; samples < 10; samples++)
 	{
+		delay(10);
 		readRawSensors();
-		
+
 		for (unsigned int i = 0; i < noOfSensors; i++)
 		{
 			if (sensorValue[i] < calibratedMin[i])
@@ -111,17 +113,20 @@ void lineSensor::calibrate( motor _motorLeft, motor _motorRight )
 				calibratedMax[i] = sensorValue[i];
 		}
 	}
-
-	_motorLeft.stop();
-	_motorRight.stop();
 
 	delay(100);
 
-	_motorLeft.setSpeed(64);
-	_motorRight.setSpeed(-64);
+	// turn left motor forward
+	analogWrite(_motorLeftA, 64);
+	digitalWrite(_motorLeftB, LOW);
 
-	for (unsigned int samples = 0; samples < 10; samples++)
+	// turn right motor backward
+	digitalWrite(_motorRightA, LOW);
+	analogWrite(_motorRightB, 64);
+
+	for (unsigned int samples = 0; samples < 20; samples++)
 	{
+		delay(10);
 		readRawSensors();
 
 		for (unsigned int i = 0; i < noOfSensors; i++)
@@ -134,19 +139,50 @@ void lineSensor::calibrate( motor _motorLeft, motor _motorRight )
 		}
 	}
 
+	delay(100);
+
+	// turn left motor backward
+	digitalWrite(_motorLeftA, LOW);
+	analogWrite(_motorLeftB, 64);
+
+	// turn right motor forward
+	analogWrite(_motorRightA, 64);
+	digitalWrite(_motorRightB, LOW);
+
+	for (unsigned int samples = 0; samples < 10; samples++)
+	{
+		delay(10);
+		readRawSensors();
+
+		for (unsigned int i = 0; i < noOfSensors; i++)
+		{
+			if (sensorValue[i] < calibratedMin[i])
+				calibratedMin[i] = sensorValue[i];
+
+			if (sensorValue[i] > calibratedMax[i])
+				calibratedMax[i] = sensorValue[i];
+		}
+	}
 }
-
-void lineSensor::calibrate( unsigned int _motorLeftA, unsigned int _motorLeftB,
-							unsigned int _motorRightA, unsigned int _motorRightB )
-{
-	calibrated = 1;
-
-}
-
 
 void lineSensor::calibrate( )
 {
 	calibrated = 1;
+
+	for (unsigned int samples = 0; samples < 30; samples++)
+	{
+		delay(100);
+		readRawSensors();
+
+		for (unsigned int i = 0; i < noOfSensors; i++)
+		{
+			if (sensorValue[i] < calibratedMin[i])
+				calibratedMin[i] = sensorValue[i];
+
+			if (sensorValue[i] > calibratedMax[i])
+				calibratedMax[i] = sensorValue[i];
+		}
+	}
 }
 
 int lineSensor::readLine()
