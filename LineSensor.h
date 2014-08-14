@@ -33,7 +33,6 @@ class lineSensor
 		lineSensor( unsigned int *_sensorPins, unsigned int _noOfSensors, unsigned int _analog )
 		{
 			sensorPins = (unsigned int*) malloc( sizeof(unsigned int) * _noOfSensors );
-			sensorValue = (unsigned int*) malloc( sizeof(unsigned int) * _noOfSensors );
 			calibratedMin = (unsigned int*)malloc(sizeof(unsigned int) * _noOfSensors);
 			calibratedMax = (unsigned int*)malloc(sizeof(unsigned int) * _noOfSensors);
 
@@ -79,12 +78,16 @@ void lineSensor::readRawSensors()
 		if (analog)
 		{
 			sensorValue[i] = analogRead(sensorPins[i]);
+			// Serial.print(sensorValue[i]);
+			// Serial.print("     ");
 		}
 		else
 		{
 			sensorValue[i] = digitalRead(sensorPins[i]);
 		}
 	}
+
+	// Serial.println();
 }
 
 void lineSensor::readCalibratedSensors()
@@ -95,8 +98,17 @@ void lineSensor::readCalibratedSensors()
 	{
 		for (unsigned int i = 0; i < noOfSensors; i++)
 		{
+			if (sensorValue[i] < calibratedMin[i])
+				sensorValue[i] = calibratedMin[i];
+			else if (sensorValue[i] > calibratedMax[i])
+				sensorValue[i] = calibratedMax[i];
+
 			sensorValue[i] = map(sensorValue[i], calibratedMin[i], calibratedMax[i], 0, 100);
+			Serial.print(sensorValue[i]);
+			Serial.print("     ");
 		}
+
+		Serial.println();
 	}
 	else
 	{
@@ -117,16 +129,16 @@ void lineSensor::calibrate(unsigned int _motorLeftA, unsigned int _motorLeftB,
 	calibrated = 1;
 
 	// turn left motor backward
-	digitalWrite(_motorLeftA, LOW);
-	analogWrite(_motorLeftB, 64);
+	analogWrite(_motorLeftA, 127);
+	digitalWrite(_motorLeftB, HIGH);
 
 	// turn right motor forward
-	analogWrite(_motorRightA, 64);
+	analogWrite(_motorRightA, 127);
 	digitalWrite(_motorRightB, LOW);
 
 	for (unsigned int samples = 0; samples < 10; samples++)
 	{
-		delay(10);
+		delay(30);
 		readRawSensors();
 
 		for (unsigned int i = 0; i < noOfSensors; i++)
@@ -139,19 +151,25 @@ void lineSensor::calibrate(unsigned int _motorLeftA, unsigned int _motorLeftB,
 		}
 	}
 
-	delay(100);
+	// stop both motors
+	digitalWrite(_motorLeftA, LOW);
+	digitalWrite(_motorLeftB, LOW);
+	digitalWrite(_motorRightA, LOW);
+	digitalWrite(_motorRightB, LOW);
+
+	delay(1000);
 
 	// turn left motor forward
-	analogWrite(_motorLeftA, 64);
+	analogWrite(_motorLeftA, 127);
 	digitalWrite(_motorLeftB, LOW);
 
 	// turn right motor backward
-	digitalWrite(_motorRightA, LOW);
-	analogWrite(_motorRightB, 64);
+	analogWrite(_motorRightA, 127);
+	digitalWrite(_motorRightB, HIGH);
 
-	for (unsigned int samples = 0; samples < 20; samples++)
+	for (unsigned int samples = 0; samples < 17; samples++)
 	{
-		delay(10);
+		delay(30);
 		readRawSensors();
 
 		for (unsigned int i = 0; i < noOfSensors; i++)
@@ -164,19 +182,25 @@ void lineSensor::calibrate(unsigned int _motorLeftA, unsigned int _motorLeftB,
 		}
 	}
 
-	delay(100);
+	// stop both motors
+	digitalWrite(_motorLeftA, LOW);
+	digitalWrite(_motorLeftB, LOW);
+	digitalWrite(_motorRightA, LOW);
+	digitalWrite(_motorRightB, LOW);
+
+	delay(1000);
 
 	// turn left motor backward
-	digitalWrite(_motorLeftA, LOW);
-	analogWrite(_motorLeftB, 64);
+	analogWrite(_motorLeftA, 127);
+	digitalWrite(_motorLeftB, HIGH);
 
 	// turn right motor forward
-	analogWrite(_motorRightA, 64);
+	analogWrite(_motorRightA, 127);
 	digitalWrite(_motorRightB, LOW);
 
 	for (unsigned int samples = 0; samples < 10; samples++)
 	{
-		delay(10);
+		delay(30);
 		readRawSensors();
 
 		for (unsigned int i = 0; i < noOfSensors; i++)
@@ -188,6 +212,14 @@ void lineSensor::calibrate(unsigned int _motorLeftA, unsigned int _motorLeftB,
 				calibratedMax[i] = sensorValue[i];
 		}
 	}
+
+	// stop both motors
+	digitalWrite(_motorLeftA, LOW);
+	digitalWrite(_motorLeftB, LOW);
+	digitalWrite(_motorRightA, LOW);
+	digitalWrite(_motorRightB, LOW);
+
+	delay(1000);
 }
 
 void lineSensor::calibrate( )
@@ -213,12 +245,12 @@ void lineSensor::calibrate( )
 	}
 }
 
-int lineSensor::readLine(unsigned char lineColor = BLACK)
+int lineSensor::readLine(unsigned char lineColor)
 {
 	unsigned char onLine = 0;
 	static int lastValue = 0;
-	float weightedAverage = 0;
-	unsigned int average = 0, sum = 0, value;
+	float average = 0, sum = 0;
+	unsigned int value;
 
 	readCalibratedSensors();
 
@@ -229,11 +261,11 @@ int lineSensor::readLine(unsigned char lineColor = BLACK)
 		if (lineColor == WHITE)
 			value = 100 - value;
 		
-		if (value > 20)
+		if (value < 60)
 			onLine = 1;
 
-		average += sensorValue[i] * i * 100;
-		sum += sensorValue[i];
+		average += value * (i - ((noOfSensors - 1.00)/2)) * 100;
+		sum += value;
 	}
 
 	if (!onLine)
@@ -245,7 +277,7 @@ int lineSensor::readLine(unsigned char lineColor = BLACK)
 			return ((noOfSensors - 1) * 100 / 2);
 	}
 
-	lastValue = (average / sum) - ((noOfSensors - 1) * 100 / 2);
+	lastValue = (average / sum);
 
 	return lastValue;
 }
