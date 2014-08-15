@@ -2,10 +2,6 @@
 #include <Arduino.h>
 #include <EEPROM.h>
 
-#define BLACK	0
-#define WHITE	1
-#define AUTO	2
-
 //This function will write a 2 byte integer to the eeprom at the specified address and address + 1
 void EEPROMWriteInt(int p_address, int p_value)
 {
@@ -275,7 +271,7 @@ void lineSensor::calibrate()
 	writeCalibrations();
 }
 
-int lineSensor::readLine(unsigned char lineColor)
+int lineSensor::readLine(unsigned char _mode)
 {
 	unsigned char onLine = 0;
 	static int lastValue = 0;
@@ -288,7 +284,13 @@ int lineSensor::readLine(unsigned char lineColor)
 	{
 		value = sensorValue[i];
 
-		if (lineColor == WHITE)
+		if (_mode == AUTO)
+		{
+			if ((sensorValue[0] < 25) && (sensorValue[noOfSensors - 1] < 25))
+				value = 100 - value;
+		}
+
+		else if (_mode == WHITE_ON_BLACK)
 			value = 100 - value;
 
 		if (value < 60)

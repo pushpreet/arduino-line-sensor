@@ -3,6 +3,10 @@
 #ifndef _LINE_SENSOR_H_
 #define _LINE_SENSOR_H_
 
+#define BLACK_ON_WHITE	0
+#define WHITE_ON_BLACK	1
+#define AUTO			2
+
 class lineSensor
 {
 	private:
@@ -30,7 +34,7 @@ class lineSensor
 		void calibrate();
 		void readRawSensors();
 		void readCalibratedSensors();
-		int readLine(unsigned char lineColor = 0);
+		int readLine(unsigned char _mode = 0);
 		
 };
 
